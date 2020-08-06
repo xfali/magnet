@@ -14,6 +14,5 @@ func TestWatcher(t *testing.T) {
 	w := magnet.Watcher{}
 	w.Watch("C:\\tmp\\dest\\backup\\1")
 	//<-time.NewTimer(30 * time.Second).C
-	select {
-	}
+	select {}
 }

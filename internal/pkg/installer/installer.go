@@ -25,5 +25,3 @@ type Recorder interface {
 	ListPackage() []Package
 	GetPackage(name string) Package
 }
-
-
