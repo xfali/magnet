@@ -114,12 +114,56 @@ func (inst *ZipInstaller) Uninstall(pkg Package) error {
 	return pkg.Uninstall()
 }
 
-func (inst *ZipInstaller) ListPackage() []Package {
-	return nil
+type ZipRecorder struct {
+	path string
+	pkgs map[string]Package
 }
 
-func (inst *ZipInstaller) GetPackage(name string) Package {
-	return nil
+func CreateRecorder(path string) (*ZipRecorder, error) {
+	ret := &ZipRecorder{
+		path: path,
+		pkgs: map[string]Package{},
+	}
+	d, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(d, &ret.pkgs)
+	if err != nil {
+		return nil, err
+	}
+	return ret, nil
+}
+
+func (r *ZipRecorder) flush() error {
+	d, err := json.Marshal(r.pkgs)
+	if err != nil {
+		return err
+	}
+
+	return ioutil.WriteFile(r.path, d, os.ModePerm)
+}
+
+func (r *ZipRecorder) Save(pkg Package) error {
+	r.pkgs[pkg.GetName()] = pkg
+	return r.flush()
+}
+
+func (r *ZipRecorder) Remove(pkg Package) error {
+	delete(r.pkgs, pkg.GetName())
+	return r.flush()
+}
+
+func (r *ZipRecorder) ListPackage() []Package {
+	ret := make([]Package, len(r.pkgs))
+	for _, v := range r.pkgs {
+		ret = append(ret, v)
+	}
+	return ret
+}
+
+func (r *ZipRecorder) GetPackage(name string) Package {
+	return r.pkgs[name]
 }
 
 func (pkg *ZipPackage) GetName() string {
@@ -134,8 +178,15 @@ func (pkg *ZipPackage) GetInfo() string {
 	return pkg.Info
 }
 
-func (pkg *ZipPackage) Uninstall() error {
-	return nil
+func (pkg *ZipPackage) Uninstall() (err error) {
+	if io2.IsPathExists(pkg.installPath) {
+		err = os.RemoveAll(pkg.installPath)
+	}
+
+	if io2.IsPathExists(pkg.pkgPath) {
+		err = os.RemoveAll(pkg.pkgPath)
+	}
+	return err
 }
 
 func readZipInfo(path string) (*ZipPackageInfo, error) {
