@@ -21,24 +21,38 @@ const (
 )
 
 type ZipPackageInfo struct {
-	ProtocolVersion string
-	AppVersion      string
-	Name            string
-	ExecCmd         string
-	Info            string
+	ProtocolVersion int    `json:"protocolVersion" yaml:"protocolVersion"`
+	AppVersion      int    `json:"appVersion" yaml:"appVersion"`
+	Name            string `json:"name" yaml:"name"`
+	ExecCmd         string `json:"execCmd" yaml:"execCmd"`
+	Info            string `json:"info" yaml:"info"`
+	ExecName        string `json:"execName" yaml:"execName"`
 }
 
 type ZipPackage struct {
-	Name    string `json:"name"`
-	Version string `json:"version"`
-	Info    string `json:"info"`
+	Name    string `json:"name" yaml:"name"`
+	Version int    `json:"version" yaml:"version"`
+	Info    string `json:"info" yaml:"info"`
 
-	pkgPath     string `json:"pkg_path"`
-	installPath string `json:"install_path"`
+	PkgPath     string `json:"pkgPath" yaml:"pkgPath"`
+	InstallPath string `json:"installPath" yaml:"installPath"`
 }
 
 type ZipInstaller struct {
 	installDir string
+}
+
+func CreateInstaller(installDir string) (*ZipInstaller, error){
+	ret := &ZipInstaller{
+		installDir: installDir,
+	}
+	if !io2.IsPathExists(installDir) {
+		err := io2.Mkdir(installDir)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return ret, nil
 }
 
 func (inst *ZipInstaller) Install(path string) (Package, error) {
@@ -55,8 +69,8 @@ func (inst *ZipInstaller) Install(path string) (Package, error) {
 			return nil, err
 		}
 	}
-	pkg.pkgPath = path
-	pkg.installPath = saveDir
+	pkg.PkgPath = path
+	pkg.InstallPath = saveDir
 
 	reader, err := zip.OpenReader(path)
 	if err != nil {
@@ -110,8 +124,8 @@ func (inst *ZipInstaller) Install(path string) (Package, error) {
 	return pkg, nil
 }
 
-func (inst *ZipInstaller) Uninstall(pkg Package) error {
-	return pkg.Uninstall()
+func (inst *ZipInstaller) Uninstall(pkg Package, del bool) error {
+	return pkg.Uninstall(del)
 }
 
 type ZipRecorder struct {
@@ -124,14 +138,21 @@ func CreateRecorder(path string) (*ZipRecorder, error) {
 		path: path,
 		pkgs: map[string]Package{},
 	}
-	d, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, err
+	if io2.IsPathExists(path) {
+		d, err := ioutil.ReadFile(path)
+		if err != nil {
+			return nil, err
+		}
+		tmp := map[string]*ZipPackage{}
+		err = json.Unmarshal(d, &tmp)
+		if err != nil {
+			return nil, err
+		}
+		for k, v := range tmp {
+			ret.pkgs[k] = v
+		}
 	}
-	err = json.Unmarshal(d, &ret.pkgs)
-	if err != nil {
-		return nil, err
-	}
+
 	return ret, nil
 }
 
@@ -170,7 +191,7 @@ func (pkg *ZipPackage) GetName() string {
 	return pkg.Name
 }
 
-func (pkg *ZipPackage) GetVersion() string {
+func (pkg *ZipPackage) GetVersion() int {
 	return pkg.Version
 }
 
@@ -178,13 +199,13 @@ func (pkg *ZipPackage) GetInfo() string {
 	return pkg.Info
 }
 
-func (pkg *ZipPackage) Uninstall() (err error) {
-	if io2.IsPathExists(pkg.installPath) {
-		err = os.RemoveAll(pkg.installPath)
+func (pkg *ZipPackage) Uninstall(delPkg bool) (err error) {
+	if io2.IsPathExists(pkg.InstallPath) {
+		err = os.RemoveAll(pkg.InstallPath)
 	}
 
-	if io2.IsPathExists(pkg.pkgPath) {
-		err = os.RemoveAll(pkg.pkgPath)
+	if delPkg && io2.IsPathExists(pkg.PkgPath) {
+		err = os.RemoveAll(pkg.PkgPath)
 	}
 	return err
 }
