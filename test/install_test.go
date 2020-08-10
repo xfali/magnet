@@ -22,6 +22,7 @@ func TestInstall(t *testing.T) {
 	}
 	pkg, err := inst.Install("./assets/hello.pkg")
 	if err != nil {
+		inst.Uninstall(pkg, false)
 		t.Fatal(err)
 	}
 	recorder.Save(pkg)

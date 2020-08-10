@@ -8,6 +8,8 @@ package installer
 import (
 	"archive/zip"
 	"bytes"
+	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	io2 "github.com/xfali/goutils/io"
@@ -103,14 +105,49 @@ func (inst *ZipInstaller) Install(path string) (Package, error) {
 				return err
 			}
 			defer w.Close()
-			_, err = io.Copy(w, rc)
-			return err
+			if filepath.Base(filename) == info.ExecName && info.Checksum != "" {
+				h := md5.New()
+				multiWriter := io.MultiWriter(w, h)
+				_, err = io.Copy(multiWriter, rc)
+				if err != nil {
+					return err
+				}
+				if hex.EncodeToString(h.Sum(nil)) != info.Checksum {
+					return errors.New("Checksum not match ")
+				}
+				return nil
+			} else {
+				_, err = io.Copy(w, rc)
+				return err
+			}
 		}()
 		if err != nil {
 			return pkg, err
 		}
 	}
 	return pkg, nil
+}
+
+func checkPackage(file string, checksum string) error {
+	if checksum == "" {
+		return nil
+	}
+
+	f, err := os.Open(file)
+	if err != nil {
+		return err
+	}
+
+	h := md5.New()
+	_, err = io.Copy(h, f)
+	if err != nil {
+		return err
+	}
+
+	if hex.EncodeToString(h.Sum(nil)) != checksum {
+		return errors.New("Checksum not match ")
+	}
+	return nil
 }
 
 func getPackageInfo(path string) (*ZipPackageInfo, error) {
