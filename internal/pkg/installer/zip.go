@@ -7,13 +7,14 @@ package installer
 
 import (
 	"archive/zip"
+	"bytes"
 	"encoding/json"
+	"errors"
 	io2 "github.com/xfali/goutils/io"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 const (
@@ -42,7 +43,7 @@ type ZipInstaller struct {
 	installDir string
 }
 
-func CreateInstaller(installDir string) (*ZipInstaller, error){
+func CreateInstaller(installDir string) (*ZipInstaller, error) {
 	ret := &ZipInstaller{
 		installDir: installDir,
 	}
@@ -57,12 +58,15 @@ func CreateInstaller(installDir string) (*ZipInstaller, error){
 
 func (inst *ZipInstaller) Install(path string) (Package, error) {
 	pkg := &ZipPackage{}
-	pluginName := filepath.Base(path)
-	lastIndex := strings.LastIndex(pluginName, ".")
-	if lastIndex != -1 {
-		pluginName = pluginName[:lastIndex]
+	info, err := getPackageInfo(path)
+	if err != nil {
+		return nil, err
 	}
-	saveDir := filepath.Join(inst.installDir, pluginName)
+	pkg.Name = info.Name
+	pkg.Version = info.AppVersion
+	pkg.Info = info.Info
+
+	saveDir := filepath.Join(inst.installDir, info.Name)
 	if !io2.IsPathExists(saveDir) {
 		err := io2.Mkdir(saveDir)
 		if err != nil {
@@ -99,29 +103,40 @@ func (inst *ZipInstaller) Install(path string) (Package, error) {
 			}
 			defer w.Close()
 			_, err = io.Copy(w, rc)
-			if err != nil {
-				return err
-			}
-			w.Close()
-			rc.Close()
-
-			if filepath.Base(filename) == ZIP_INFO_FILENAME {
-				info, err := readZipInfo(filename)
-				if err != nil {
-					return err
-				}
-				pkg.Name = info.Name
-				pkg.Version = info.AppVersion
-				pkg.Info = info.Info
-			}
-
-			return nil
+			return err
 		}()
 		if err != nil {
 			return pkg, err
 		}
 	}
 	return pkg, nil
+}
+
+func getPackageInfo(path string) (*ZipPackageInfo, error) {
+	reader, err := zip.OpenReader(path)
+	if err != nil {
+		return nil, err
+	}
+	defer reader.Close()
+	for _, file := range reader.File {
+		if filepath.Base(file.Name) == ZIP_INFO_FILENAME {
+			return func() (*ZipPackageInfo, error) {
+				rc, err := file.Open()
+				if err != nil {
+					return nil, err
+				}
+				defer rc.Close()
+				var buf bytes.Buffer
+				buf.Grow(int(file.UncompressedSize64))
+				_, err = buf.ReadFrom(rc)
+				if err != nil {
+					return nil, err
+				}
+				return readZipInfo(buf.Bytes())
+			}()
+		}
+	}
+	return nil, errors.New("pkg.info not found")
 }
 
 func (inst *ZipInstaller) Uninstall(pkg Package, del bool) error {
@@ -210,13 +225,9 @@ func (pkg *ZipPackage) Uninstall(delPkg bool) (err error) {
 	return err
 }
 
-func readZipInfo(path string) (*ZipPackageInfo, error) {
-	d, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
+func readZipInfo(data []byte) (*ZipPackageInfo, error) {
 	ret := &ZipPackageInfo{}
-	err = json.Unmarshal(d, ret)
+	err := json.Unmarshal(data, ret)
 	if err != nil {
 		return nil, err
 	}
