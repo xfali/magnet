@@ -6,13 +6,18 @@
 package test
 
 import (
-	"github.com/xfali/magnet"
+	"github.com/xfali/magnet/internal/pkg/installer"
+	"github.com/xfali/magnet/internal/pkg/watcher"
 	"testing"
 )
 
 func TestWatcher(t *testing.T) {
-	w := magnet.Watcher{}
-	w.Watch("C:\\tmp\\dest\\backup\\1")
+	w := watcher.PackageWatcher{}
+	w.AddListener(&watcher.DummyListener{})
+	pkg := installer.ZipPackage{
+		InstallPath: "target/test",
+	}
+	w.Watch(&pkg)
 	//<-time.NewTimer(30 * time.Second).C
 	select {}
 }

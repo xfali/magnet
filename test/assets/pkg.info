@@ -4,5 +4,6 @@
 	"name": "test",
 	"execCmd": "sh -c ${EXECUTABLE}",
 	"info": "hello world test",
-	"execName": "hello"
+	"execName": "hello",
+	"checksum": "fa2c121a591fa08e15b1"
 }

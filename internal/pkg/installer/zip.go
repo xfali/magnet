@@ -28,6 +28,7 @@ type ZipPackageInfo struct {
 	ExecCmd         string `json:"execCmd" yaml:"execCmd"`
 	Info            string `json:"info" yaml:"info"`
 	ExecName        string `json:"execName" yaml:"execName"`
+	Checksum        string `json:"checksum" yaml:"checksum"`
 }
 
 type ZipPackage struct {
@@ -212,6 +213,10 @@ func (pkg *ZipPackage) GetVersion() int {
 
 func (pkg *ZipPackage) GetInfo() string {
 	return pkg.Info
+}
+
+func (pkg *ZipPackage) GetInstallPath() string {
+	return pkg.InstallPath
 }
 
 func (pkg *ZipPackage) Uninstall(delPkg bool) (err error) {
