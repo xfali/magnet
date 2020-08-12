@@ -229,7 +229,7 @@ func (r *ZipRecorder) Remove(pkg Package) error {
 }
 
 func (r *ZipRecorder) ListPackage() []Package {
-	ret := make([]Package, len(r.pkgs))
+	ret := make([]Package, 0, len(r.pkgs))
 	for _, v := range r.pkgs {
 		ret = append(ret, v)
 	}
