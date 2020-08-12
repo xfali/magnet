@@ -8,7 +8,7 @@ package watcher
 import (
 	"fmt"
 	"github.com/fsnotify/fsnotify"
-	"github.com/xfali/magnet/internal/pkg/installer"
+	"github.com/xfali/magnet/pkg/installer"
 	"github.com/xfali/stream"
 	"log"
 	"sync"

@@ -178,7 +178,7 @@ func getPackageInfo(path string) (*ZipPackageInfo, error) {
 }
 
 func (inst *ZipInstaller) Uninstall(pkg Package, del bool) error {
-	return pkg.Uninstall(del)
+	return Uninstall(del)
 }
 
 type ZipRecorder struct {
@@ -219,12 +219,12 @@ func (r *ZipRecorder) flush() error {
 }
 
 func (r *ZipRecorder) Save(pkg Package) error {
-	r.pkgs[pkg.GetName()] = pkg
+	r.pkgs[GetName()] = pkg
 	return r.flush()
 }
 
 func (r *ZipRecorder) Remove(pkg Package) error {
-	delete(r.pkgs, pkg.GetName())
+	delete(r.pkgs, GetName())
 	return r.flush()
 }
 

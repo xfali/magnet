@@ -6,7 +6,7 @@
 package test
 
 import (
-	"github.com/xfali/magnet/internal/pkg/installer"
+	"github.com/xfali/magnet/pkg/installer"
 	"github.com/xfali/stream"
 	"testing"
 )
