@@ -23,6 +23,7 @@ type PackageListener interface {
 type Watcher interface {
 	AddListener(PackageListener)
 	Watch(p installer.Package)
+	Stop()
 }
 
 type PackageWatcher struct {
@@ -30,6 +31,12 @@ type PackageWatcher struct {
 	stop      chan struct{}
 
 	lock sync.Mutex
+}
+
+func NewWatcher() *PackageWatcher {
+	return &PackageWatcher{
+		stop: make(chan struct{}),
+	}
 }
 
 func (w *PackageWatcher) Stop() {
