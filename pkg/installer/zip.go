@@ -120,7 +120,7 @@ func (inst *ZipInstaller) Install(path string) (Package, error) {
 					return nil
 				}
 			} else {
-				w, err = os.Open(filename)
+				w, err = os.Create(filename)
 				if err != nil {
 					return err
 				}
