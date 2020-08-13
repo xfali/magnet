@@ -27,6 +27,8 @@ type Watcher interface {
 	Stop()
 }
 
+type Factory func() Watcher
+
 type PackageWatcher struct {
 	listeners []PackageListener
 	stop      chan struct{}
@@ -34,7 +36,7 @@ type PackageWatcher struct {
 	lock sync.Mutex
 }
 
-func NewWatcher() *PackageWatcher {
+func NewWatcher() Watcher {
 	return &PackageWatcher{
 		stop: make(chan struct{}),
 	}
@@ -114,9 +116,11 @@ type PackageBatchWatcher struct {
 	interval time.Duration
 }
 
-func NewPackageBatchWatcher(interval time.Duration) *PackageBatchWatcher {
+func NewPackageBatchWatcher(interval time.Duration) Watcher {
 	return &PackageBatchWatcher{
-		PackageWatcher: *NewWatcher(),
+		PackageWatcher: PackageWatcher{
+			stop: make(chan struct{}),
+		},
 		interval:interval,
 	}
 }

@@ -13,10 +13,11 @@ import (
 )
 
 type Magnet struct {
-	installer installer.Installer
-	recorder  installer.Recorder
-	listener  watcher.PackageListener
-	watchers  map[string]watcher.Watcher
+	installer  installer.Installer
+	recorder   installer.Recorder
+	listener   watcher.PackageListener
+	watcherFac watcher.Factory
+	watchers   map[string]watcher.Watcher
 
 	watchLock sync.Mutex
 }
@@ -25,7 +26,8 @@ type Opt func(m *Magnet)
 
 func New(opts ...Opt) *Magnet {
 	ret := &Magnet{
-		watchers: map[string]watcher.Watcher{},
+		watcherFac: watcher.NewWatcher,
+		watchers:   map[string]watcher.Watcher{},
 	}
 	for i := range opts {
 		opts[i](ret)
@@ -55,7 +57,7 @@ func (m *Magnet) Install(path string) (err error) {
 		return
 	}
 
-	w := watcher.NewWatcher()
+	w := m.watcherFac()
 	w.AddListener(m.listener)
 	w.Watch(pkg)
 
@@ -108,6 +110,12 @@ func SetRecorder(r installer.Recorder) Opt {
 func SetListener(l watcher.PackageListener) Opt {
 	return func(m *Magnet) {
 		m.listener = l
+	}
+}
+
+func SetWatchFactory(fac watcher.Factory) Opt {
+	return func(m *Magnet) {
+		m.watcherFac = fac
 	}
 }
 
