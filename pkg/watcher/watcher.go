@@ -121,7 +121,7 @@ func NewPackageBatchWatcher(interval time.Duration) Watcher {
 		PackageWatcher: PackageWatcher{
 			stop: make(chan struct{}),
 		},
-		interval:interval,
+		interval: interval,
 	}
 }
 
@@ -182,16 +182,16 @@ func (w *PackageBatchWatcher) Watch(p installer.Package) {
 	}()
 }
 
-type DummyListener struct {}
+type DummyListener struct{}
 
 func (l *DummyListener) OnCreate(p installer.Package, filename string) {
 	fmt.Printf("package : %v created, file : %s\n", p, filename)
 }
 
-func (l *DummyListener)OnUpdate(p installer.Package, filename string) {
+func (l *DummyListener) OnUpdate(p installer.Package, filename string) {
 	fmt.Printf("package : %v update, file : %s\n", p, filename)
 }
 
-func (l *DummyListener)OnRemove(p installer.Package, filename string) {
+func (l *DummyListener) OnRemove(p installer.Package, filename string) {
 	fmt.Printf("package : %v remove, file : %s\n", p, filename)
 }

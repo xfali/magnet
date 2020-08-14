@@ -17,6 +17,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sync"
 )
 
 const (
@@ -197,6 +198,8 @@ func (inst *ZipInstaller) Uninstall(pkg Package, del bool) error {
 type ZipRecorder struct {
 	path string
 	pkgs map[string]Package
+
+	lock sync.Mutex
 }
 
 func CreateRecorder(path string) (*ZipRecorder, error) {
@@ -232,16 +235,25 @@ func (r *ZipRecorder) flush() error {
 }
 
 func (r *ZipRecorder) Save(pkg Package) error {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+
 	r.pkgs[pkg.GetName()] = pkg
 	return r.flush()
 }
 
 func (r *ZipRecorder) Remove(pkg Package) error {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+
 	delete(r.pkgs, pkg.GetName())
 	return r.flush()
 }
 
 func (r *ZipRecorder) ListPackage() []Package {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+
 	ret := make([]Package, 0, len(r.pkgs))
 	for _, v := range r.pkgs {
 		ret = append(ret, v)
@@ -250,6 +262,9 @@ func (r *ZipRecorder) ListPackage() []Package {
 }
 
 func (r *ZipRecorder) GetPackage(name string) Package {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+
 	return r.pkgs[name]
 }
 

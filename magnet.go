@@ -128,6 +128,10 @@ func (m *Magnet) Uninstall(name string) (err error) {
 	return m.recorder.Remove(pkg)
 }
 
+func (m *Magnet) GetPackage(name string) installer.Package {
+	return m.recorder.GetPackage(name)
+}
+
 func (m *Magnet) ListPackage() []installer.Package {
 	return m.recorder.ListPackage()
 }

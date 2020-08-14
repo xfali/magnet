@@ -28,7 +28,7 @@ type Package interface {
 
 	// 获得安装路径
 	GetInstallPath() string
-	
+
 	// 卸载已安装应用文件，delPkg为true则将同时删除安装包
 	Uninstall(delPkg bool) error
 }

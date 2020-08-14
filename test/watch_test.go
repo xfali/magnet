@@ -24,7 +24,7 @@ func TestWatcher(t *testing.T) {
 }
 
 func TestPackageBatchWatcher(t *testing.T) {
-	w := watcher.NewPackageBatchWatcher(1*time.Second)
+	w := watcher.NewPackageBatchWatcher(1 * time.Second)
 	w.AddListener(&watcher.DummyListener{})
 	pkg := installer.ZipPackage{
 		InstallPath: "target/test",
