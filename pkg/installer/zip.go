@@ -29,6 +29,7 @@ type ZipPackageInfo struct {
 	Name            string `json:"name" yaml:"name"`
 	ExecCmd         string `json:"execCmd" yaml:"execCmd"`
 	Info            string `json:"info" yaml:"info"`
+	Description     string `json:"description" yaml:"description"`
 	ExecName        string `json:"execName" yaml:"execName"`
 	Checksum        string `json:"checksum" yaml:"checksum"`
 }
@@ -57,6 +58,10 @@ func CreateInstaller(installDir string) (*ZipInstaller, error) {
 		}
 	}
 	return ret, nil
+}
+
+func (inst *ZipInstaller) ReadInfo(path string) (PackageInfo, error) {
+	return getPackageInfo(path)
 }
 
 func (inst *ZipInstaller) Install(path string) (Package, error) {
@@ -246,6 +251,20 @@ func (r *ZipRecorder) ListPackage() []Package {
 
 func (r *ZipRecorder) GetPackage(name string) Package {
 	return r.pkgs[name]
+}
+
+func (r *ZipPackageInfo) GetName() string {
+	return r.Info
+}
+
+// 获得安装包版本号
+func (r *ZipPackageInfo) GetVersion() int {
+	return r.AppVersion
+}
+
+// 获得安装包描述
+func (r *ZipPackageInfo) GetDescription() string {
+	return r.Description
 }
 
 func (pkg *ZipPackage) GetName() string {

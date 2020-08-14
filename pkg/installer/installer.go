@@ -5,6 +5,17 @@
 
 package installer
 
+type PackageInfo interface {
+	// 获得安装包名称
+	GetName() string
+
+	// 获得安装包版本号
+	GetVersion() int
+
+	// 获得安装包描述
+	GetDescription() string
+}
+
 type Package interface {
 	// 获得安装包名称
 	GetName() string
@@ -23,9 +34,14 @@ type Package interface {
 }
 
 type Installer interface {
+	// 读取安装包信息
+	// Param: path安装包路径，请使用绝对路径
+	// Return: Package安装包信息， error 读取错误
+	ReadInfo(path string) (PackageInfo, error)
+
 	// 安装
 	// Param: path安装包路径，请使用绝对路径
-	// Return: Package安装包信息， error 安装错误
+	// Return: Package安装信息， error 安装错误
 	Install(path string) (Package, error)
 
 	// 卸载

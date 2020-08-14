@@ -7,9 +7,20 @@ package magnet
 
 import (
 	"errors"
+	"fmt"
+	"github.com/xfali/goutils/log"
 	"github.com/xfali/magnet/pkg/installer"
 	"github.com/xfali/magnet/pkg/watcher"
 	"sync"
+)
+
+const (
+	//如果不存在则安装
+	InstallFlagNotExists = 0
+	//使用新版本覆盖安装
+	InstallFlagNewVersion = 1
+	//强制覆盖安装
+	InstallFlagForce = 1 << 1
 )
 
 type Magnet struct {
@@ -44,12 +55,38 @@ func (m *Magnet) Close() error {
 	return nil
 }
 
-func (m *Magnet) Install(path string) (err error) {
-	pkg, err := m.installer.Install(path)
+func (m *Magnet) Install(path string, flag int) (pkg installer.Package, err error) {
+	info, err := m.installer.ReadInfo(path)
+	if err != nil {
+		return
+	}
+
+	pkg = m.recorder.GetPackage(info.GetName())
+	if pkg != nil {
+		//非强制安装
+		if flag&InstallFlagForce == 0 {
+			//安装新版本或更新已有版本
+			if flag&InstallFlagNewVersion != 0 {
+				//安装包比现有安装更老
+				if info.GetVersion() < pkg.GetVersion() {
+					return pkg, fmt.Errorf("Package: %s Exists version: %d is Newer than Install version %d ",
+						pkg.GetName(), pkg.GetVersion(), info.GetVersion())
+				}
+			} else {
+				//默认非强制安装及非更新安装都选择不安装
+				return pkg, errors.New("Package: " + pkg.GetName() + " Exists")
+			}
+		}
+		log.Info("Package: %s Exists version: %d , New Package version %d , install flag: %d\n",
+			pkg.GetName(), pkg.GetVersion(), info.GetVersion(), flag)
+		m.Uninstall(pkg.GetName())
+	}
+
+	pkg, err = m.installer.Install(path)
 	if err != nil {
 		if pkg != nil {
 			pkg.Uninstall(true)
-			return err
+			return nil, err
 		}
 	}
 	err = m.recorder.Save(pkg)
@@ -65,7 +102,7 @@ func (m *Magnet) Install(path string) (err error) {
 	defer m.watchLock.Unlock()
 	m.watchers[pkg.GetInstallPath()] = w
 
-	return nil
+	return pkg, nil
 }
 
 func (m *Magnet) Uninstall(name string) (err error) {
