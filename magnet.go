@@ -46,6 +46,7 @@ func New(opts ...Opt) *Magnet {
 	return ret
 }
 
+// 关闭Magnet
 func (m *Magnet) Close() error {
 	m.watchLock.Lock()
 	for _, v := range m.watchers {
@@ -55,6 +56,8 @@ func (m *Magnet) Close() error {
 	return nil
 }
 
+// 安装
+// param： path安装包路径， flag 安装标志
 func (m *Magnet) Install(path string, flag int) (pkg installer.Package, err error) {
 	info, err := m.installer.ReadInfo(path)
 	if err != nil {
@@ -79,7 +82,7 @@ func (m *Magnet) Install(path string, flag int) (pkg installer.Package, err erro
 		}
 		log.Info("Package: %s Exists version: %d , New Package version %d , install flag: %d\n",
 			pkg.GetName(), pkg.GetVersion(), info.GetVersion(), flag)
-		m.Uninstall(pkg.GetName())
+		m.Uninstall(pkg.GetName(), false)
 	}
 
 	pkg, err = m.installer.Install(path)
@@ -105,12 +108,14 @@ func (m *Magnet) Install(path string, flag int) (pkg installer.Package, err erro
 	return pkg, nil
 }
 
-func (m *Magnet) Uninstall(name string) (err error) {
+// 卸载安装
+// param: name 安装包名称， delPkg 是否卸载同时删除安装包
+func (m *Magnet) Uninstall(name string, delPkg bool) (err error) {
 	pkg := m.recorder.GetPackage(name)
 	if pkg == nil {
 		return errors.New("package: " + name + " not found")
 	}
-	err = pkg.Uninstall(false)
+	err = pkg.Uninstall(delPkg)
 	if err != nil {
 		return err
 	}
@@ -128,38 +133,45 @@ func (m *Magnet) Uninstall(name string) (err error) {
 	return m.recorder.Remove(pkg)
 }
 
+// 根据安装包名称获得安装信息
 func (m *Magnet) GetPackage(name string) installer.Package {
 	return m.recorder.GetPackage(name)
 }
 
+// 获得所有安装信息
 func (m *Magnet) ListPackage() []installer.Package {
 	return m.recorder.ListPackage()
 }
 
+// 设置安装管理器，实现安装的流程
 func SetInstaller(i installer.Installer) Opt {
 	return func(m *Magnet) {
 		m.installer = i
 	}
 }
 
+// 设置安装记录工具，用于记录安装信息
 func SetRecorder(r installer.Recorder) Opt {
 	return func(m *Magnet) {
 		m.recorder = r
 	}
 }
 
+// 设置安装应用监听器，用于监听安装应用的状态，包括更新、删除
 func SetListener(l watcher.PackageListener) Opt {
 	return func(m *Magnet) {
 		m.listener = l
 	}
 }
 
+// 设置应用监听器的生成器
 func SetWatchFactory(fac watcher.Factory) Opt {
 	return func(m *Magnet) {
 		m.watcherFac = fac
 	}
 }
 
+// 使用默认配置，包括Installer、Recorder、WatcherFactory、Listener
 func Default(installDir, recordFile string) Opt {
 	return func(m *Magnet) {
 		var err error
@@ -171,6 +183,7 @@ func Default(installDir, recordFile string) Opt {
 		if err != nil {
 			panic(err)
 		}
+		m.watcherFac = watcher.NewWatcher
 		m.listener = &watcher.DummyListener{}
 	}
 }
