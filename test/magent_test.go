@@ -17,7 +17,15 @@ func TestMagnet(t *testing.T) {
 		return watcher.NewPackageBatchWatcher(1 * time.Second)
 	}))
 	t.Run("install", func(t *testing.T) {
-		err := m.Install("./assets/hello.pkg")
+		_, err := m.Install("./assets/hello.pkg", magnet.InstallFlagNotExists)
+		if err != nil {
+			t.Fatal(err)
+		}
+		//time.Sleep(time.Minute)
+	})
+
+	t.Run("install", func(t *testing.T) {
+		_, err := m.Install("./assets/hello.pkg", magnet.InstallFlagNewVersion)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -32,7 +40,7 @@ func TestMagnet(t *testing.T) {
 	})
 
 	t.Run("uninstall", func(t *testing.T) {
-		err := m.Uninstall("test")
+		err := m.Uninstall("test", false)
 		if err != nil {
 			t.Fatal(err)
 		}

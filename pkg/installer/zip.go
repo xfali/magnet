@@ -269,7 +269,7 @@ func (r *ZipRecorder) GetPackage(name string) Package {
 }
 
 func (r *ZipPackageInfo) GetName() string {
-	return r.Info
+	return r.Name
 }
 
 // 获得安装包版本号
