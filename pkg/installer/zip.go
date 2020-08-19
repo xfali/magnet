@@ -106,31 +106,22 @@ func (inst *ZipInstaller) Install(path string) (Package, error) {
 				}
 			}
 
-			var w *os.File
-			if filepath.Base(filename) == info.ExecName {
-				w, err = os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0777)
+			w, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, file.Mode())
+			if err != nil {
+				return err
+			}
+			defer w.Close()
+			if filepath.Base(filename) == info.ExecName && info.Checksum != "" {
+				h := md5.New()
+				multiWriter := io.MultiWriter(w, h)
+				_, err = io.Copy(multiWriter, rc)
 				if err != nil {
 					return err
 				}
-				defer w.Close()
-				if info.Checksum != "" {
-					h := md5.New()
-					multiWriter := io.MultiWriter(w, h)
-					_, err = io.Copy(multiWriter, rc)
-					if err != nil {
-						return err
-					}
-					if hex.EncodeToString(h.Sum(nil)) != info.Checksum {
-						return errors.New("Checksum not match ")
-					}
-					return nil
+				if hex.EncodeToString(h.Sum(nil)) != info.Checksum {
+					return errors.New("Checksum not match ")
 				}
-			} else {
-				w, err = os.Create(filename)
-				if err != nil {
-					return err
-				}
-				defer w.Close()
+				return nil
 			}
 			_, err = io.Copy(w, rc)
 			return err

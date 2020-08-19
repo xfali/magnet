@@ -56,6 +56,12 @@ func (m *Magnet) Close() error {
 	return nil
 }
 
+// 获得安装包信息
+// param： path安装包路径
+func (m *Magnet) ReadInfo(path string) (pkg installer.PackageInfo, err error) {
+	return m.installer.ReadInfo(path)
+}
+
 // 安装
 // param： path安装包路径， flag 安装标志
 func (m *Magnet) Install(path string, flag int) (pkg installer.Package, err error) {
