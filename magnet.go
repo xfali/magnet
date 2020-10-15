@@ -24,6 +24,7 @@ const (
 )
 
 type Magnet struct {
+	strategy   installer.Strategy
 	installer  installer.Installer
 	recorder   installer.Recorder
 	listener   watcher.PackageListener
@@ -37,6 +38,7 @@ type Opt func(m *Magnet)
 
 func New(opts ...Opt) *Magnet {
 	ret := &Magnet{
+		strategy:   installer.NewStrategy(),
 		watcherFac: watcher.NewWatcher,
 		watchers:   map[string]watcher.Watcher{},
 	}
@@ -91,7 +93,7 @@ func (m *Magnet) Install(path string, flag int) (pkg installer.Package, err erro
 		m.Uninstall(pkg.GetName(), false)
 	}
 
-	pkg, err = m.installer.Install(path)
+	pkg, err = m.installer.Install(path, m.strategy)
 	if err != nil {
 		if pkg != nil {
 			pkg.Uninstall(true)
@@ -147,6 +149,13 @@ func (m *Magnet) GetPackage(name string) installer.Package {
 // 获得所有安装信息
 func (m *Magnet) ListPackage() []installer.Package {
 	return m.recorder.ListPackage()
+}
+
+// 设置安装策略，控制安装的行为
+func SetInstallStrategy(s installer.Strategy) Opt {
+	return func(m *Magnet) {
+		m.strategy = s
+	}
 }
 
 // 设置安装管理器，实现安装的流程

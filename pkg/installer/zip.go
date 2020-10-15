@@ -65,7 +65,7 @@ func (inst *ZipInstaller) ReadInfo(path string) (PackageInfo, error) {
 	return getPackageInfo(path)
 }
 
-func (inst *ZipInstaller) Install(path string) (Package, error) {
+func (inst *ZipInstaller) Install(path string, strategy Strategy) (Package, error) {
 	pkg := &ZipPackage{}
 	info, err := getPackageInfo(path)
 	if err != nil {
@@ -75,12 +75,9 @@ func (inst *ZipInstaller) Install(path string) (Package, error) {
 	pkg.Version = info.AppVersion
 	pkg.Info = info.Info
 
-	saveDir := filepath.Join(inst.installDir, info.Name)
-	if !io2.IsPathExists(saveDir) {
-		err := io2.Mkdir(saveDir)
-		if err != nil {
-			return nil, err
-		}
+	saveDir, err := strategy.GenInstallPath(inst.installDir, info)
+	if err != nil {
+		return nil, err
 	}
 	pkg.PkgPath = path
 	pkg.InstallPath = saveDir
@@ -305,6 +302,20 @@ func readZipInfo(data []byte) (*ZipPackageInfo, error) {
 	err := json.Unmarshal(data, ret)
 	if err != nil {
 		return nil, err
+	}
+	return ret, nil
+}
+
+type DefaultStrategy struct{}
+
+func NewStrategy() *DefaultStrategy {
+	return &DefaultStrategy{}
+}
+
+func (s *DefaultStrategy) GenInstallPath(dir string, pkgInfo PackageInfo) (string, error) {
+	ret := filepath.Join(dir, pkgInfo.GetName())
+	if !io2.IsPathExists(ret) {
+		return ret, io2.Mkdir(ret)
 	}
 	return ret, nil
 }

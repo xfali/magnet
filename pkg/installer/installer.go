@@ -33,6 +33,11 @@ type Package interface {
 	Uninstall(delPkg bool) error
 }
 
+type Strategy interface {
+	// 生成安装包安装路径
+	GenInstallPath(dir string, pkgInfo PackageInfo) (string, error)
+}
+
 type Installer interface {
 	// 读取安装包信息
 	// Param: path安装包路径，请使用绝对路径
@@ -42,7 +47,7 @@ type Installer interface {
 	// 安装
 	// Param: path安装包路径，请使用绝对路径
 	// Return: Package安装信息， error 安装错误
-	Install(path string) (Package, error)
+	Install(path string, strategy Strategy) (Package, error)
 
 	// 卸载
 	// Param: pkg安装包信息，delPkg是否同时删除安装包

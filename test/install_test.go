@@ -20,7 +20,7 @@ func TestInstall(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	pkg, err := inst.Install("./assets/hello.pkg")
+	pkg, err := inst.Install("./assets/hello.pkg", installer.NewStrategy())
 	if err != nil {
 		inst.Uninstall(pkg, false)
 		t.Fatal(err)
