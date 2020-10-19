@@ -249,11 +249,11 @@ func (r *ZipRecorder) ListPackage() []Package {
 	return ret
 }
 
-func (r *ZipRecorder) GetPackage(name string) Package {
+func (r *ZipRecorder) GetPackage(name string) []Package {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
-	return r.pkgs[name]
+	return []Package{r.pkgs[name]}
 }
 
 func (r *ZipPackageInfo) GetName() string {

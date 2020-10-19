@@ -15,12 +15,16 @@ import (
 )
 
 const (
-	//如果不存在则安装
+	// 如果不存在则安装
 	InstallFlagNotExists = 0
-	//使用新版本覆盖安装
+	// 使用新版本覆盖安装
 	InstallFlagNewVersion = 1
-	//强制覆盖安装
+	// 强制安装，不做任何检查
 	InstallFlagForce = 1 << 1
+	// 卸载已存在的所有安装包
+	InstallFlagUninstallExists = 1 << 2
+	// 卸载已存在的旧版本
+	InstallFlagUninstallOld = 1 << 3
 )
 
 type Magnet struct {
@@ -66,34 +70,46 @@ func (m *Magnet) ReadInfo(path string) (pkg installer.PackageInfo, err error) {
 
 // 安装
 // param： path安装包路径， flag 安装标志
-func (m *Magnet) Install(path string, flag int) (pkg installer.Package, err error) {
+func (m *Magnet) Install(path string, flag int) (installer.Package, error) {
 	info, err := m.installer.ReadInfo(path)
 	if err != nil {
-		return
+		return nil, err
 	}
 
-	pkg = m.recorder.GetPackage(info.GetName())
-	if pkg != nil {
-		//非强制安装
-		if flag&InstallFlagForce == 0 {
-			//安装新版本或更新已有版本
-			if flag&InstallFlagNewVersion != 0 {
-				//安装包比现有安装更老
-				if info.GetVersion() < pkg.GetVersion() {
-					return pkg, fmt.Errorf("Package: %s Exists version: %d is Newer than Install version %d ",
-						pkg.GetName(), pkg.GetVersion(), info.GetVersion())
+	if flag&InstallFlagForce == 0 {
+		pkgs := m.recorder.GetPackage(info.GetName())
+		if len(pkgs) > 0 {
+			var pkg2remove []installer.Package
+			// 非删除所有已存在安装包
+			if flag&InstallFlagUninstallExists == 0 {
+				//仅安装新版本
+				if flag&InstallFlagNewVersion != 0 {
+					for _, pkg := range pkgs {
+						//安装包比现有安装更老
+						if info.GetVersion() <= pkg.GetVersion() {
+							return pkg, fmt.Errorf("Package: %s Exists version: %d is Newer than Install version %d ",
+								pkg.GetName(), pkg.GetVersion(), info.GetVersion())
+						} else {
+							if flag&InstallFlagUninstallOld != 0 {
+								pkg2remove = append(pkg2remove, pkg)
+							}
+						}
+					}
+				} else {
+					// 默认非删除所有已存在安装包及非更新安装都选择不安装
+					// 由于同名程序已存在，不做卸载处理可能出现问题。
+					return nil, errors.New("Package: " + info.GetName() + " Exists")
 				}
 			} else {
-				//默认非强制安装及非更新安装都选择不安装
-				return pkg, errors.New("Package: " + pkg.GetName() + " Exists")
+				pkg2remove = pkgs
+			}
+			if len(pkg2remove) > 0 {
+				m.UninstallPkgs(false, pkg2remove...)
 			}
 		}
-		log.Info("Package: %s Exists version: %d , New Package version %d , install flag: %d\n",
-			pkg.GetName(), pkg.GetVersion(), info.GetVersion(), flag)
-		m.Uninstall(pkg.GetName(), false)
 	}
 
-	pkg, err = m.installer.Install(path, m.strategy)
+	pkg, err := m.installer.Install(path, m.strategy)
 	if err != nil {
 		if pkg != nil {
 			pkg.Uninstall(true)
@@ -102,7 +118,7 @@ func (m *Magnet) Install(path string, flag int) (pkg installer.Package, err erro
 	}
 	err = m.recorder.Save(pkg)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	w := m.watcherFac()
@@ -118,31 +134,42 @@ func (m *Magnet) Install(path string, flag int) (pkg installer.Package, err erro
 
 // 卸载安装
 // param: name 安装包名称， delPkg 是否卸载同时删除安装包
-func (m *Magnet) Uninstall(name string, delPkg bool) (err error) {
-	pkg := m.recorder.GetPackage(name)
-	if pkg == nil {
-		return errors.New("package: " + name + " not found")
+func (m *Magnet) Uninstall(name string, delPkg bool) error {
+	pkgs := m.recorder.GetPackage(name)
+	if len(pkgs) > 0 {
+		return m.UninstallPkgs(delPkg, pkgs...)
 	}
-	err = pkg.Uninstall(delPkg)
-	if err != nil {
-		return err
-	}
+	return nil
+}
 
-	func() {
-		m.watchLock.Lock()
-		defer m.watchLock.Unlock()
-		w := m.watchers[pkg.GetInstallPath()]
-		if w != nil {
-			w.Stop()
+func (m *Magnet) UninstallPkgs(delPkg bool, pkgs ...installer.Package) (err error) {
+	for _, pkg := range pkgs {
+		log.Info("Uninstall package: %s Exists version: %d delPkg: %d\n", pkg.GetName(), pkg.GetVersion(), delPkg)
+		err = pkg.Uninstall(delPkg)
+		if err != nil {
+			return err
 		}
-		delete(m.watchers, pkg.GetInstallPath())
-	}()
 
-	return m.recorder.Remove(pkg)
+		func() {
+			m.watchLock.Lock()
+			defer m.watchLock.Unlock()
+			w := m.watchers[pkg.GetInstallPath()]
+			if w != nil {
+				w.Stop()
+			}
+			delete(m.watchers, pkg.GetInstallPath())
+		}()
+
+		err := m.recorder.Remove(pkg)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // 根据安装包名称获得安装信息
-func (m *Magnet) GetPackage(name string) installer.Package {
+func (m *Magnet) GetPackage(name string) []installer.Package {
 	return m.recorder.GetPackage(name)
 }
 

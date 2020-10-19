@@ -64,5 +64,5 @@ type Recorder interface {
 	// 列出所有已安装应用
 	ListPackage() []Package
 	// 根据名称获得安装信息
-	GetPackage(name string) Package
+	GetPackage(name string) []Package
 }
