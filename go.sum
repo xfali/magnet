@@ -1,8 +1,11 @@
 github.com/fsnotify/fsnotify v1.4.9 h1:hsms1Qyu0jgnwNXIxa+/V/PDsU6CfLf6CNO8H7IWoS4=
 github.com/fsnotify/fsnotify v1.4.9/go.mod h1:znqG4EE+3YCdAaPaxE2ZRY/06pZUdp0tY4IgpuI1SZQ=
+github.com/go-logr/logr v0.2.0/go.mod h1:z6/tIYblkpsD+a4lm/fGIIU9mZ+XfAiaFtq7xTgseGU=
 github.com/xfali/goutils v0.0.6 h1:BAM2l0iBYiA3+dDP0sVFobWmbYhoVJNcyv4zaz0608M=
 github.com/xfali/goutils v0.0.6/go.mod h1:Z1gZz5xVqHiSiwL+8GpzriqfQeGfV5ipSXsZFhnItSA=
 github.com/xfali/stream v0.0.4 h1:p+ICINeWbX1MliblqsTcVct05gJZI5d+SVSgL5lfJXI=
 github.com/xfali/stream v0.0.4/go.mod h1:rJ5FeUxoDxD8EJJ1AFxMX5/cyDPdFTs2rEdm10NdrxU=
+github.com/xfali/xlog v0.0.9 h1:U0n9cle55l+pCpd3UdFrP8LCve5yWKtxBeJWgp64sVY=
+github.com/xfali/xlog v0.0.9/go.mod h1:W9nEm+z16pEh1HAOW9m/GuVk1h9FE29jv1byivczWcw=
 golang.org/x/sys v0.0.0-20191005200804-aed5e4c7ecf9 h1:L2auWcuQIvxz9xSEqzESnV/QN/gNRXNApHi3fYwl2w0=
 golang.org/x/sys v0.0.0-20191005200804-aed5e4c7ecf9/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=

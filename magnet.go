@@ -8,9 +8,10 @@ package magnet
 import (
 	"errors"
 	"fmt"
-	"github.com/xfali/goutils/log"
 	"github.com/xfali/magnet/pkg/installer"
+	"github.com/xfali/magnet/pkg/task"
 	"github.com/xfali/magnet/pkg/watcher"
+	"github.com/xfali/xlog"
 	"sync"
 )
 
@@ -33,7 +34,10 @@ type Magnet struct {
 	recorder   installer.Recorder
 	listener   watcher.PackageListener
 	watcherFac watcher.Factory
-	watchers   map[string]watcher.Watcher
+
+	taskCtrl task.Controller
+	log      xlog.Logger
+	watchers map[string]watcher.Watcher
 
 	watchLock sync.Mutex
 }
@@ -45,6 +49,9 @@ func New(opts ...Opt) *Magnet {
 		strategy:   installer.NewStrategy(),
 		watcherFac: watcher.NewWatcher,
 		watchers:   map[string]watcher.Watcher{},
+
+		taskCtrl: task.NewController(),
+		log:      xlog.GetLogger(),
 	}
 	for i := range opts {
 		opts[i](ret)
@@ -76,6 +83,14 @@ func (m *Magnet) Install(path string, flag int) (installer.Package, error) {
 		return nil, err
 	}
 
+	handle, err := m.taskCtrl.AddTask(info.GetName())
+	if err != nil {
+		return nil, err
+	}
+	// for install sub task
+	handle.Add(1)
+	defer handle.Done()
+
 	if flag&InstallFlagForce == 0 {
 		pkgs := m.recorder.GetPackage(info.GetName())
 		if len(pkgs) > 0 {
@@ -104,7 +119,7 @@ func (m *Magnet) Install(path string, flag int) (installer.Package, error) {
 				pkg2remove = pkgs
 			}
 			if len(pkg2remove) > 0 {
-				m.UninstallPkgs(false, pkg2remove...)
+				m.uninstallPkgs(handle, false, pkg2remove...)
 			}
 		}
 	}
@@ -143,26 +158,45 @@ func (m *Magnet) Uninstall(name string, delPkg bool) error {
 }
 
 func (m *Magnet) UninstallPkgs(delPkg bool, pkgs ...installer.Package) (err error) {
-	for _, pkg := range pkgs {
-		log.Info("Uninstall package: %s Exists version: %d delPkg: %d\n", pkg.GetName(), pkg.GetVersion(), delPkg)
-		err = pkg.Uninstall(delPkg)
+	if len(pkgs) > 0 {
+		h, err := m.taskCtrl.AddTask(pkgs[0].GetName())
 		if err != nil {
 			return err
 		}
+		h.Add(len(pkgs))
+		return m.uninstallPkgs(h, delPkg, pkgs...)
+	}
+	return nil
+}
 
-		func() {
-			m.watchLock.Lock()
-			defer m.watchLock.Unlock()
-			w := m.watchers[pkg.GetInstallPath()]
-			if w != nil {
-				w.Stop()
-			}
-			delete(m.watchers, pkg.GetInstallPath())
-		}()
+func (m *Magnet) uninstallOne(handle task.Handle, delPkg bool, pkg installer.Package) (err error) {
+	defer handle.Done()
 
-		err := m.recorder.Remove(pkg)
+	m.log.Infof("Uninstall package: %s Exists version: %d delPkg: %d\n", pkg.GetName(), pkg.GetVersion(), delPkg)
+	err = pkg.Uninstall(delPkg)
+	if err != nil {
+		return err
+	}
+
+	func() {
+		m.watchLock.Lock()
+		defer m.watchLock.Unlock()
+		w := m.watchers[pkg.GetInstallPath()]
+		if w != nil {
+			w.Stop()
+		}
+		delete(m.watchers, pkg.GetInstallPath())
+	}()
+
+	return m.recorder.Remove(pkg)
+}
+
+func (m *Magnet) uninstallPkgs(handle task.Handle, delPkg bool, pkgs ...installer.Package) error {
+	for _, pkg := range pkgs {
+		err := m.uninstallOne(handle, delPkg, pkg)
 		if err != nil {
-			return err
+			m.log.Infof("Uninstall package: %s error: %v\n", pkg.GetName(), err)
+			continue
 		}
 	}
 	return nil
@@ -203,6 +237,13 @@ func SetRecorder(r installer.Recorder) Opt {
 func SetListener(l watcher.PackageListener) Opt {
 	return func(m *Magnet) {
 		m.listener = l
+	}
+}
+
+// 设置安装应用监听器，用于监听安装应用的状态，包括更新、删除
+func SetLogger(l xlog.Logger) Opt {
+	return func(m *Magnet) {
+		m.log = l
 	}
 }
 
