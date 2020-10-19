@@ -26,6 +26,8 @@ const (
 	InstallFlagUninstallExists = 1 << 2
 	// 卸载已存在的旧版本
 	InstallFlagUninstallOld = 1 << 3
+	// 当需要卸载时，使用异步方式卸载
+	InstallFlagAsyncUninstall = 1 << 4
 )
 
 type Magnet struct {
@@ -119,7 +121,11 @@ func (m *Magnet) Install(path string, flag int) (installer.Package, error) {
 				pkg2remove = pkgs
 			}
 			if len(pkg2remove) > 0 {
-				m.uninstallPkgs(handle, false, pkg2remove...)
+				if flag&InstallFlagAsyncUninstall != 0 {
+					go m.uninstallPkgs(handle, false, pkg2remove...)
+				} else {
+					m.uninstallPkgs(handle, false, pkg2remove...)
+				}
 			}
 		}
 	}
