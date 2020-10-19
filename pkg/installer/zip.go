@@ -14,10 +14,8 @@ import (
 	"errors"
 	io2 "github.com/xfali/goutils/io"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
-	"sync"
 )
 
 const (
@@ -183,79 +181,6 @@ func (inst *ZipInstaller) Uninstall(pkg Package, del bool) error {
 	return pkg.Uninstall(del)
 }
 
-type ZipRecorder struct {
-	path string
-	pkgs map[string]Package
-
-	lock sync.Mutex
-}
-
-func CreateRecorder(path string) (*ZipRecorder, error) {
-	ret := &ZipRecorder{
-		path: path,
-		pkgs: map[string]Package{},
-	}
-	if io2.IsPathExists(path) {
-		d, err := ioutil.ReadFile(path)
-		if err != nil {
-			return nil, err
-		}
-		tmp := map[string]*ZipPackage{}
-		err = json.Unmarshal(d, &tmp)
-		if err != nil {
-			return nil, err
-		}
-		for k, v := range tmp {
-			ret.pkgs[k] = v
-		}
-	}
-
-	return ret, nil
-}
-
-func (r *ZipRecorder) flush() error {
-	d, err := json.Marshal(r.pkgs)
-	if err != nil {
-		return err
-	}
-
-	return ioutil.WriteFile(r.path, d, os.ModePerm)
-}
-
-func (r *ZipRecorder) Save(pkg Package) error {
-	r.lock.Lock()
-	defer r.lock.Unlock()
-
-	r.pkgs[pkg.GetName()] = pkg
-	return r.flush()
-}
-
-func (r *ZipRecorder) Remove(pkg Package) error {
-	r.lock.Lock()
-	defer r.lock.Unlock()
-
-	delete(r.pkgs, pkg.GetName())
-	return r.flush()
-}
-
-func (r *ZipRecorder) ListPackage() []Package {
-	r.lock.Lock()
-	defer r.lock.Unlock()
-
-	ret := make([]Package, 0, len(r.pkgs))
-	for _, v := range r.pkgs {
-		ret = append(ret, v)
-	}
-	return ret
-}
-
-func (r *ZipRecorder) GetPackage(name string) []Package {
-	r.lock.Lock()
-	defer r.lock.Unlock()
-
-	return []Package{r.pkgs[name]}
-}
-
 func (r *ZipPackageInfo) GetName() string {
 	return r.Name
 }
@@ -295,6 +220,22 @@ func (pkg *ZipPackage) Uninstall(delPkg bool) (err error) {
 		err = os.RemoveAll(pkg.PkgPath)
 	}
 	return err
+}
+
+func (pkg *ZipPackage) Equal(other Package) bool {
+	if pkg.Name != other.GetName() {
+		return false
+	}
+	if pkg.Version != other.GetVersion() {
+		return false
+	}
+	if pkg.InstallPath != other.GetInstallPath() {
+		return false
+	}
+	if pkg.Info != other.GetInfo() {
+		return false
+	}
+	return true
 }
 
 func readZipInfo(data []byte) (*ZipPackageInfo, error) {

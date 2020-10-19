@@ -31,6 +31,9 @@ type Package interface {
 
 	// 卸载已安装应用文件，delPkg为true则将同时删除安装包
 	Uninstall(delPkg bool) error
+
+	// 判断两个Package是否相同
+	Equal(other Package) bool
 }
 
 type Strategy interface {

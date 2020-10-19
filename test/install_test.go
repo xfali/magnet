@@ -46,10 +46,10 @@ func TestUninstall(t *testing.T) {
 	}
 	pkg := recorder.GetPackage("test")
 	if pkg != nil {
-		err := pkg.Uninstall(false)
+		err := pkg[0].Uninstall(false)
 		if err != nil {
 			t.Fatal(err)
 		}
-		recorder.Remove(pkg)
+		recorder.Remove(pkg[0])
 	}
 }
